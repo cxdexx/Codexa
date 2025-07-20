@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather Quotes Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"></script>
+
+  <!-- ✅ Google AdSense loader script (only once) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8970628409098313"
+          crossorigin="anonymous"></script>
+
+  <!-- ✅ Tailwind config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            fadeIn: "fadeIn 1s ease-in forwards"
+          },
+          keyframes: {
+            fadeIn: {
+              "0%": { opacity: "0", transform: "translateY(10px)" },
+              "100%": { opacity: "1", transform: "translateY(0)" }
+            }
+          },
+          fontFamily: {
+            poppins: ["Poppins", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- ✅ Cookie Consent with Ad logic -->
+  <script>
+    window.addEventListener("load", function(){
+      window.cookieconsent.initialise({
+        palette: {
+          popup: { background: "#1e293b" },
+          button: { background: "#6366f1", text: "#fff" }
+        },
+        type: "opt-in",
+        content: {
+          message: "We use cookies to personalize ads and improve your experience.",
+          allow: "Accept All",
+          deny: "Reject",
+          link: "Learn more",
+          href: "/privacy.html"
+        },
+        onStatusChange: function(status) {
+          if (status === "allow") {
+            enableAdCookies();
+            fetch("http://localhost:3000/cookie-consent", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                email: new URLSearchParams(window.location.search).get("email"), 
+                consent: true 
+              })
+            });
+          }
+        }
+      });
+    });
+
+    function enableAdCookies() {
+      const adScript = document.createElement("script");
+      adScript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
+      adScript.async = true;
+      adScript.setAttribute("data-ad-client", "ca-pub-8970628409098313");
+      document.head.appendChild(adScript);
+    }
+  </script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-indigo-700 to-purple-900 text-white font-poppins flex flex-col items-center justify-center px-4 py-10 space-y-6">
+
+
+  <!-- User Info Container -->
+<div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 bg-white/10 p-4 sm:p-6 rounded-2xl shadow-lg animate-fadeIn max-w-xl w-full">
+
+  <!-- Avatar & Upload -->
+  <div class="flex flex-col items-center">
+    <img id="avatar" alt="Avatar" width="100" class="rounded-full border-2 border-white/20 shadow-md"/>
+    <label for="avatarInput" class="mt-2 inline-block px-4 py-1 text-sm bg-indigo-500 hover:bg-indigo-600 rounded-full cursor-pointer transition duration-300">
+      Change Avatar
+    </label>
+    <input type="file" id="avatarInput" accept="image/*" class="hidden" />
+  </div>
+
+  <!-- User Text Info -->
+  <div class="text-center sm:text-left">
+    <h1 class="text-2xl sm:text-3xl font-bold text-white">Welcome back, <span id="username">User</span> 👋</h1>
+    <p id="greeting" class="text-lg text-white/90 mt-1"></p>
+    <p id="email" class="text-sm text-white/60 mt-1"></p>
+    <!-- Sidebar -->
+<!-- <div class="fixed top-0 right-0 h-full w-16 bg-gray-900 flex flex-col items-center py-4 shadow-lg z-50"> -->
+  <button
+    id="logoutBtn" onclick="logout()"
+    class="bg-blue-500 hover:bg-red-600 text-white w-45 h-45 rounded-full flex items-center justify-center mb-4"
+    title="Logout"
+  >
+    Logout
+  </button>
+</div>
+  </div>
+</div>
+
+
+  <!-- Mood and Save -->
+  <select id="mood" class="bg-white/10 text-white p-2 rounded-lg">
+    <option value="Motivation">Motivation</option>
+    <option value="Love">Love</option>
+    <option value="Sadness">Sadness</option>
+  </select>
+  <button onclick="saveQuote()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg ml-2">
+    Save Quote
+  </button>
+
+  <!-- Weather Info -->
+  <div id="weatherSection" class="backdrop-blur-md bg-white/10 border border-white/20 p-6 rounded-2xl w-full max-w-md text-center animate-fadeIn">
+    <h2 class="text-xl font-semibold mb-2">🌦️ Weather</h2>
+    <p id="weatherInfo" class="text-white/80">Loading current weather...</p>
+  </div>
+
+  <!-- Quote Info -->
+  <div id="quoteSection" class="backdrop-blur-md bg-white/10 border border-white/20 p-6 rounded-2xl w-full max-w-md text-center space-y-3 animate-fadeIn">
+    <h2 class="text-xl font-semibold mb-2">💬 Quote of the Moment</h2>
+    <p id="quoteText" class="italic text-white/70">Fetching quote...</p>
+
+    <select id="moodSelect" class="w-full bg-white/10 text-white/80 px-4 py-2 rounded-lg focus:outline-none border border-white/30">
+      <option value="">Select Mood</option>
+      <option value="🔥 Motivation">🔥 Motivation</option>
+      <option value="💔 Heartbreak">💔 Heartbreak</option>
+      <option value="🧘 Calm">🧘 Calm</option>
+      <option value="💡 Thoughtful">💡 Thoughtful</option>
+      <option value="😢 Sad">😢 Sad</option>
+    </select>
+
+    <button id="saveQuoteBtn" class="w-full mt-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg">
+      ❤️ Save Quote
+    </button>
+    <p id="saveStatus" class="text-sm text-white/60 mt-1"></p>
+  </div>
+  <!-- Saved Quotes Section -->
+<div id="savedQuotesSection" class="mt-6 w-full max-w-md space-y-2">
+  <h3 class="text-lg font-semibold text-white">🗃️ Your Saved Quotes</h3>
+  <ul id="saved-quotes-list" class="space-y-3"></ul>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-6 right-6 bg-white text-gray-900 font-semibold px-4 py-2 rounded-lg shadow-lg hidden z-50 transition duration-300 ease-in-out"></div>
+
+  <!-- ✅ Footer AdSense Banner -->
+  <footer class="mt-10 w-full max-w-md text-center">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8970628409098313"
+         data-ad-slot="1449804657"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </footer>
+
+
+  <script type="module" src="dashboard.js"></script>
+<!-- ✅ Toast Container -->
+<div id="toast" class="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-md hidden z-50 transition-opacity duration-300"></div>
+
+</body>
+</html>

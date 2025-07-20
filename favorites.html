@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Saved Quotes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            fadeIn: "fadeIn 1s ease-in forwards",
+            slideIn: "slideIn 0.3s ease-out forwards"
+          },
+          keyframes: {
+            fadeIn: {
+              "0%": { opacity: "0", transform: "translateY(10px)" },
+              "100%": { opacity: "1", transform: "translateY(0)" }
+            },
+            slideIn: {
+              "0%": { opacity: "0", transform: "translateY(20px)" },
+              "100%": { opacity: "1", transform: "translateY(0)" }
+            }
+          },
+          fontFamily: {
+            poppins: ["Poppins", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-700 to-purple-900 text-white font-poppins flex flex-col items-center py-10 px-4 relative">
+
+  <h1 class="text-3xl font-bold mb-4 animate-fadeIn">❤️ Hello, <span id="username">User</span></h1>
+  <h2 class="text-xl text-white/80 mb-4">Here are your saved quotes:</h2>
+
+  <!-- Mood Filter Buttons -->
+  <div id="filterButtons" class="flex flex-wrap gap-2 mb-6">
+    <button data-filter="🔥 Motivation" class="filter-btn bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">🔥 Motivation (<span class="count">0</span>)</button>
+    <button data-filter="💔 Heartbreak" class="filter-btn bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">💔 Heartbreak (<span class="count">0</span>)</button>
+    <button data-filter="🧘 Calm" class="filter-btn bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">🧘 Calm (<span class="count">0</span>)</button>
+    <button data-filter="💡 Thoughtful" class="filter-btn bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">💡 Thoughtful (<span class="count">0</span>)</button>
+    <button data-filter="😢 Sad" class="filter-btn bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">😢 Sad (<span class="count">0</span>)</button>
+    <button data-filter="all" class="filter-btn bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">🔁 All (<span id="allCount">0</span>)</button>
+  </div>
+
+  <!-- Saved Quotes -->
+  <div id="quotesContainer" class="grid gap-4 w-full max-w-2xl animate-fadeIn"></div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white text-black px-6 py-3 rounded-lg shadow-lg font-medium z-50 animate-slideIn"></div>
+
+  <!-- Firebase + Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMowNDcKkVb2awkl_qzq6HzoiMC2syZ0E",
+      authDomain: "weather--quotes.firebaseapp.com",
+      projectId: "weather--quotes",
+      storageBucket: "weather--quotes.appspot.com",
+      messagingSenderId: "547944346489",
+      appId: "1:547944346489:web:384cbb93492a51b975b5a8",
+      measurementId: "G-HMJ2GHG4GV"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const quotesContainer = document.getElementById("quotesContainer");
+    const userSpan = document.getElementById("username");
+    const toast = document.getElementById("toast");
+    let allQuotes = [];
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        const name = user.displayName || user.email;
+        userSpan.textContent = name;
+
+        const favRef = collection(db, "users", user.uid, "favorites");
+        const snapshot = await getDocs(favRef);
+
+        if (snapshot.empty) {
+          quotesContainer.innerHTML = `<p class="text-center text-white/60">No quotes saved yet.</p>`;
+        } else {
+          snapshot.forEach(docSnap => {
+            const quote = docSnap.data();
+            quote.id = docSnap.id;
+            allQuotes.push(quote);
+          });
+
+          renderQuotes(allQuotes);
+          updateMoodCounts(allQuotes);
+        }
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    function renderQuotes(quotes) {
+      quotesContainer.innerHTML = "";
+
+      quotes.forEach(quote => {
+        const card = document.createElement("div");
+        card.className = "bg-white/10 backdrop-blur-lg p-4 rounded-xl border border-white/20 shadow-lg relative";
+        card.setAttribute("data-mood", quote.mood);
+
+        card.innerHTML = `
+          <p class="italic text-white/90 mb-2">"${quote.content}"</p>
+          <p class="text-sm text-white/60 mb-1">— ${quote.author || "Unknown"}</p>
+          <span class="text-xs bg-white/20 text-white px-2 py-1 rounded-full inline-block">${quote.mood || "No mood"}</span>
+          <button class="absolute top-3 right-3 text-red-400 hover:text-red-600 text-lg font-bold delete-btn" data-id="${quote.id}" data-mood="${quote.mood}">🗑</button>
+        `;
+
+        quotesContainer.appendChild(card);
+      });
+
+      document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const quoteId = btn.getAttribute("data-id");
+          const mood = btn.getAttribute("data-mood");
+
+          await deleteDoc(doc(db, "users", auth.currentUser.uid, "favorites", quoteId));
+          allQuotes = allQuotes.filter(q => q.id !== quoteId);
+          renderQuotes(allQuotes);
+          updateMoodCounts(allQuotes);
+          showToast(`✅ ${mood} quote deleted`);
+        });
+      });
+    }
+
+    function updateMoodCounts(quotes) {
+      const moodMap = {
+        "🔥 Motivation": 0,
+        "💔 Heartbreak": 0,
+        "🧘 Calm": 0,
+        "💡 Thoughtful": 0,
+        "😢 Sad": 0,
+      };
+
+      quotes.forEach(q => {
+        if (moodMap[q.mood] !== undefined) {
+          moodMap[q.mood]++;
+        }
+      });
+
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        const mood = btn.getAttribute("data-filter");
+        const countEl = btn.querySelector(".count");
+
+        if (mood === "all") {
+          document.getElementById("allCount").textContent = quotes.length;
+        } else if (countEl && moodMap[mood] !== undefined) {
+          countEl.textContent = moodMap[mood];
+        }
+      });
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+
+      setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 3000);
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const mood = btn.getAttribute("data-filter");
+        if (mood === "all") {
+          renderQuotes(allQuotes);
+        } else {
+          const filtered = allQuotes.filter(q => q.mood === mood);
+          renderQuotes(filtered);
+        }
+        updateMoodCounts(allQuotes); // Refresh count
+      });
+    });
+  </script>
+</body>
+</html>
