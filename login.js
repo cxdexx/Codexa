@@ -12,9 +12,12 @@ document.getElementById("loginForm").addEventListener("submit", async function (
   submitBtn.textContent = "Logging in...";
 
   try {
-    const res = await fetch("http://localhost:3000/login", {
+    const res = await fetch("https://codexa-backend.onrender.com/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include", // <-- store session cookie!
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ email, password }),
     });
 
@@ -24,9 +27,9 @@ document.getElementById("loginForm").addEventListener("submit", async function (
       toastMsg.textContent = "✅ Login successful! Redirecting...";
       toast.classList.remove("hidden");
 
-      // Optional: Save session/cookie
       setTimeout(() => {
-        window.location.href = `dashboard.html?email=${encodeURIComponent(data.user.email)}`;
+        // Redirect without passing email in URL
+        window.location.href = "dashboard.html";
       }, 1500);
     } else {
       toastMsg.textContent = data.error || "❌ Login failed.";

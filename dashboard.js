@@ -10,8 +10,7 @@ const avatarInput = document.querySelector("#avatarInput");
 // Fallback to default avatar if none passed
 let avatar = avatarFromURL;
 if (!avatar || avatar.trim() === "") {
-  const fallbackAvatar = `https://api.dicebear.com/6.x/initials/svg?seed=${encodeURIComponent(name)}`;
-  avatar = fallbackAvatar;
+  avatar = `https://api.dicebear.com/6.x/initials/svg?seed=${encodeURIComponent(name)}`;
 }
 
 // Override with locally uploaded avatar if available
@@ -62,30 +61,35 @@ function showToast(message, type = "success") {
 }
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
-    fetch("/logout", { method: "POST" })
-      .then(() => {
-        window.location.href = "login.html";
-      })
-      .catch((err) => {
-        console.error("Logout failed:", err);
-      });
-  });
+  fetch("https://codexa-backend.onrender.com/logout", {
+    method: "POST",
+    credentials: "include",
+  })
+    .then(() => {
+      window.location.href = "login.html";
+    })
+    .catch((err) => {
+      console.error("Logout failed:", err);
+    });
+});
+
 async function saveQuote() {
   const quoteText = document.getElementById("quoteText").textContent;
   const mood = document.getElementById("mood").value;
 
   if (!quoteText || !mood) return showToast("Missing quote or mood", "error");
 
-  fetch("http://localhost:3000/save-quote", {
+  fetch("https://codexa-backend.onrender.com/save-quote", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ quote: quoteText, mood, userEmail: email }),
+    body: JSON.stringify({ quote: quoteText, mood }),
   })
     .then((res) => res.json())
     .then((data) => {
       if (data.message === "Quote saved") {
         showToast("✅ Quote saved successfully!");
-        loadSavedQuotes(email);
+        loadSavedQuotes();
       } else {
         showToast("❌ Failed to save quote", "error");
       }
@@ -93,9 +97,11 @@ async function saveQuote() {
     .catch(() => showToast("❌ Network error", "error"));
 }
 
-async function loadSavedQuotes(userEmail) {
+async function loadSavedQuotes() {
   try {
-    const res = await fetch(`http://localhost:3000/saved-quotes?email=${encodeURIComponent(userEmail)}`);
+    const res = await fetch("https://codexa-backend.onrender.com/saved-quotes", {
+      credentials: "include",
+    });
     const quotes = await res.json();
 
     if (!Array.isArray(quotes)) return console.error("Expected an array");
@@ -115,13 +121,36 @@ async function loadSavedQuotes(userEmail) {
       mood.className = "text-xs text-white/60 mt-1";
       mood.textContent = `Mood: ${q.mood || "Unknown"}`;
 
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "🗑️ Delete";
+      deleteBtn.className = "mt-2 text-sm text-red-400 hover:text-red-600";
+      deleteBtn.onclick = () => deleteQuote(q._id);
+
       card.appendChild(quoteText);
       card.appendChild(mood);
+      card.appendChild(deleteBtn);
       list.appendChild(card);
     });
   } catch (err) {
     console.error("Failed to load saved quotes:", err);
   }
+}
+
+function deleteQuote(id) {
+  fetch(`https://codexa-backend.onrender.com/delete-quote/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success) {
+        showToast("🗑️ Quote deleted");
+        loadSavedQuotes();
+      } else {
+        showToast("❌ Failed to delete", "error");
+      }
+    })
+    .catch(() => showToast("❌ Network error", "error"));
 }
 
 function fetchWeather(lat, lon) {
@@ -167,4 +196,4 @@ if ("geolocation" in navigator) {
   fetchQuote();
 }
 
-loadSavedQuotes(email);
+loadSavedQuotes();

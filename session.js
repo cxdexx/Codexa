@@ -1,7 +1,7 @@
 // session.js
 
 window.addEventListener("DOMContentLoaded", () => {
-  fetch("http://localhost:3000/session", {
+  fetch("https://codexa-backend.onrender.com/session", {
     credentials: "include"
   })
     .then((res) => res.json())
@@ -12,5 +12,9 @@ window.addEventListener("DOMContentLoaded", () => {
         console.log("✅ Logged in as:", user.name || user.email);
         // Optional: document.getElementById("welcome").innerText = `Hi, ${user.name}`;
       }
+    })
+    .catch((err) => {
+      console.error("⚠️ Session check failed:", err);
+      window.location.href = "login.html";
     });
 });

@@ -7,13 +7,12 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
   const toast = document.getElementById("toast");
   const toastMsg = document.getElementById("toast-msg");
 
-  // Disable button temporarily to prevent multiple submissions
   const submitBtn = e.target.querySelector("button[type='submit']");
   submitBtn.disabled = true;
   submitBtn.textContent = "Signing you up...";
 
   try {
-    const res = await fetch("http://localhost:3000/signup", {
+    const res = await fetch("https://codexa-backend.onrender.com/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -25,7 +24,6 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
       toastMsg.textContent = "✅ Signup successful! Redirecting...";
       toast.classList.remove("hidden");
 
-      // Optional: store user in localStorage/cookies later
       setTimeout(() => {
         window.location.href = `dashboard.html?email=${encodeURIComponent(data.user.email)}`;
       }, 1500);
