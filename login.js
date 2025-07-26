@@ -1,3 +1,4 @@
+// login.js
 document.getElementById("loginForm").addEventListener("submit", async function (e) {
   e.preventDefault();
 
@@ -14,7 +15,7 @@ document.getElementById("loginForm").addEventListener("submit", async function (
   try {
     const res = await fetch("https://codexa-backend.onrender.com/login", {
       method: "POST",
-      credentials: "include", // <-- store session cookie!
+      credentials: "include", // Allows cookie session
       headers: {
         "Content-Type": "application/json",
       },
@@ -28,7 +29,7 @@ document.getElementById("loginForm").addEventListener("submit", async function (
       toast.classList.remove("hidden");
 
       setTimeout(() => {
-        // Redirect without passing email in URL
+        // Redirect after successful login
         window.location.href = "dashboard.html";
       }, 1500);
     } else {
@@ -44,4 +45,9 @@ document.getElementById("loginForm").addEventListener("submit", async function (
     submitBtn.disabled = false;
     submitBtn.textContent = "Log In";
   }
+});
+
+// Optional GitHub redirect fix (if hosted on Netlify)
+document.getElementById("githubLogin").addEventListener("click", () => {
+  window.location.href = "https://codexa-backend.onrender.com/auth/github";
 });

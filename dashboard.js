@@ -7,20 +7,13 @@ const avatarFromURL = params.get("avatar") || "";
 const avatarImg = document.querySelector("#avatar");
 const avatarInput = document.querySelector("#avatarInput");
 
-// Fallback to default avatar if none passed
-let avatar = avatarFromURL;
-if (!avatar || avatar.trim() === "") {
-  avatar = `https://api.dicebear.com/6.x/initials/svg?seed=${encodeURIComponent(name)}`;
-}
-
-// Override with locally uploaded avatar if available
+// Fallback avatar
+let avatar = avatarFromURL?.trim() || `https://api.dicebear.com/6.x/initials/svg?seed=${encodeURIComponent(name)}`;
 const savedAvatar = localStorage.getItem("customAvatar");
 if (savedAvatar) avatar = savedAvatar;
-
-// Set final avatar
 if (avatarImg) avatarImg.src = avatar;
 
-// Handle user avatar upload
+// Handle avatar upload
 if (avatarInput) {
   avatarInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -35,66 +28,94 @@ if (avatarInput) {
   });
 }
 
-// Redirect if email missing
-if (!email || email === "Unknown") {
-  showToast("⚠️ Missing email. Redirecting to login...");
-  setTimeout(() => {
-    window.location.href = "login.html";
-  }, 3000);
+// Show toast helper
+function showToast(message, type = "success") {
+  const toast = document.getElementById("toast");
+  if (!toast) return alert(message);
+  toast.textContent = message;
+  toast.className = `fixed bottom-6 right-6 z-50 px-4 py-2 rounded-lg shadow-md transition duration-300 ease-in-out ${
+    type === "error" ? "bg-red-500 text-white" : "bg-green-500 text-white"
+  }`;
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 3000);
 }
 
-// UI injection
+// Redirect if email missing
+if (!email || email === "Unknown") {
+  fetch("https://codexa-backend.onrender.com/logout", {
+    method: "POST",
+    credentials: "include",
+  }).finally(() => {
+    // Only redirect if we're NOT on login/signup page
+if (
+  !document.cookie.includes("user_session") &&
+  !window.location.pathname.includes("login.html") &&
+  !window.location.pathname.includes("signup.html")
+) {
+  showToast("Session expired, redirecting to login...");
+  window.location.href = "/login.html";
+}
+
+  });
+}
+// frontend/dashboard.js
+fetch('https://codexa-backend.onrender.com/routes/session', {
+  credentials: 'include',
+})
+  .then((res) => res.json())
+  .then((data) => {
+    if (data && data.name) {
+      // ✅ Show dashboard
+      document.getElementById('username').textContent = data.name;
+      // etc...
+    } else {
+      window.location.href = '/login.html';
+    }
+  })
+  .catch(() => {
+    window.location.href = '/login.html';
+  });
+
+
+// UI updates
 document.getElementById("username").textContent = name;
 document.getElementById("greeting").textContent = `Welcome, ${name}!`;
 document.getElementById("email").textContent = `Email: ${email}`;
 
-let currentQuote = {};
-
-function showToast(message, type = "success") {
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.classList.remove("hidden");
-  toast.className = `fixed bottom-6 right-6 z-50 px-4 py-2 rounded-lg shadow-md transition duration-300 ease-in-out ${
-    type === "error" ? "bg-red-500 text-white" : "bg-green-500 text-white"
-  }`;
-  setTimeout(() => toast.classList.add("hidden"), 3000);
-}
-
+// Logout
 document.getElementById("logoutBtn").addEventListener("click", () => {
   fetch("https://codexa-backend.onrender.com/logout", {
     method: "POST",
     credentials: "include",
   })
-    .then(() => {
-      window.location.href = "login.html";
-    })
-    .catch((err) => {
-      console.error("Logout failed:", err);
-    });
+    .then(() => (window.location.href = "login.html"))
+    .catch(() => showToast("❌ Logout failed", "error"));
 });
 
-async function saveQuote() {
-  const quoteText = document.getElementById("quoteText").textContent;
-  const mood = document.getElementById("mood").value;
+let currentQuote = {};
 
+async function saveQuote() {
+  const quoteText = document.getElementById("quoteText")?.textContent?.trim();
+  const mood = document.getElementById("mood")?.value || "Neutral";
   if (!quoteText || !mood) return showToast("Missing quote or mood", "error");
 
-  fetch("https://codexa-backend.onrender.com/save-quote", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ quote: quoteText, mood }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.message === "Quote saved") {
-        showToast("✅ Quote saved successfully!");
-        loadSavedQuotes();
-      } else {
-        showToast("❌ Failed to save quote", "error");
-      }
-    })
-    .catch(() => showToast("❌ Network error", "error"));
+  try {
+    const res = await fetch("https://codexa-backend.onrender.com/save-quote", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quote: quoteText, mood }),
+    });
+    const data = await res.json();
+    if (data.message === "Quote saved") {
+      showToast("✅ Quote saved successfully!");
+      loadSavedQuotes();
+    } else {
+      showToast("❌ Failed to save quote", "error");
+    }
+  } catch {
+    showToast("❌ Network error", "error");
+  }
 }
 
 async function loadSavedQuotes() {
@@ -104,10 +125,10 @@ async function loadSavedQuotes() {
     });
     const quotes = await res.json();
 
-    if (!Array.isArray(quotes)) return console.error("Expected an array");
-
     const list = document.getElementById("saved-quotes-list");
     list.innerHTML = "";
+
+    if (!Array.isArray(quotes)) return;
 
     quotes.reverse().forEach((q) => {
       const card = document.createElement("li");
@@ -126,9 +147,7 @@ async function loadSavedQuotes() {
       deleteBtn.className = "mt-2 text-sm text-red-400 hover:text-red-600";
       deleteBtn.onclick = () => deleteQuote(q._id);
 
-      card.appendChild(quoteText);
-      card.appendChild(mood);
-      card.appendChild(deleteBtn);
+      card.append(quoteText, mood, deleteBtn);
       list.appendChild(card);
     });
   } catch (err) {
@@ -182,7 +201,7 @@ function fetchQuote(mood) {
     });
 }
 
-// Initial weather + quote
+// Init
 if ("geolocation" in navigator) {
   navigator.geolocation.getCurrentPosition(
     (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
