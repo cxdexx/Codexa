@@ -12,10 +12,34 @@
   <!-- Cookie Consent -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const res = await fetch('https://codexa-backend.onrender.com/api/session', {
+        credentials: 'include', // 👈 IMPORTANT for cookies to be sent
+      });
+
+      if (!res.ok) {
+        throw new Error('Session expired');
+      }
+
+      const { name, email, avatar } = await res.json();
+
+      // 🔽 Update DOM with user data
+      document.getElementById('userName').textContent = name;
+      document.getElementById('userEmail').textContent = email;
+      document.getElementById('userAvatar').src = avatar || 'default-avatar.png';
+
+    } catch (err) {
+      console.warn('⚠️ Redirecting to login due to error:', err.message);
+      window.location.href = '/login.html';
+    }
+  });
+</script>
 
   <!-- AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8970628409098313"
-          crossorigin="anonymous"></script>
+ <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8970628409098313"
+     crossorigin="anonymous"></script>
 
   <!-- Tailwind Config -->
   <script>
@@ -96,6 +120,7 @@
       <h1 class="text-2xl sm:text-3xl font-bold text-white">Welcome back, <span id="username">User</span> 👋</h1>
       <p id="greeting" class="text-lg text-white/90 mt-1"></p>
       <p id="email" class="text-sm text-white/60 mt-1"></p>
+      <img id="userAvatar" src="" alt="User Avatar" />
       <button
         id="logoutBtn" onclick="logout()"
         class="mt-4 bg-blue-500 hover:bg-red-600 text-white px-4 py-2 rounded-full transition">
