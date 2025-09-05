@@ -31,7 +31,7 @@
     // fallbackSession: ask backend for session info and update URL (no reload)
     async function fallbackSession() {
       try {
-        const res = await fetch("https://codexa-backend.onrender.com/session", {
+        const res = await fetch("https://codexa-backend.onrender.com/routes/session", {
           credentials: "include",
         });
         if (!res.ok) throw new Error("Invalid session");
